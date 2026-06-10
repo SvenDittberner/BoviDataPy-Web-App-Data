@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoviDataPy — Faena bovina Paraguay 2006–2026</title>
+<meta name="description" content="Base de datos histórica y dashboard analítico de la faena bovina en Paraguay: categorías, estacionalidad, machos vs. hembras y comparación de años. Datos SENACSA/MGAP.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='1' y='1' width='30' height='30' rx='7' fill='%231a4a31'/><line x1='5' y1='22' x2='27' y2='22' stroke='%232E7D5B' stroke-width='0.5' stroke-dasharray='2,2'/><line x1='5' y1='16' x2='27' y2='16' stroke='%232E7D5B' stroke-width='0.5' stroke-dasharray='2,2'/><line x1='5' y1='10' x2='27' y2='10' stroke='%232E7D5B' stroke-width='0.5' stroke-dasharray='2,2'/><line x1='5' y1='8' x2='5' y2='27' stroke='%234a9a71' stroke-width='0.75'/><line x1='5' y1='27' x2='27' y2='27' stroke='%234a9a71' stroke-width='0.75'/><path d='M5,24 L9,21 L13,18 L17,14 L21,10 L24,13 L27,9 L27,27 L5,27 Z' fill='%232E7D5B' opacity='0.3'/><path d='M5,24 L9,21 L13,18 L17,14 L21,10 L24,13 L27,9' fill='none' stroke='%235ac491' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/><circle cx='21' cy='10' r='2' fill='%23E0B23E'/><circle cx='27' cy='9' r='2' fill='%23E0B23E'/></svg>">
+</head>
+<body>
+
+<!-- ===================== HERO ===================== -->
+<header class="hero">
+  <div class="hero-top">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <!-- Hintergrund -->
+        <rect x="1" y="1" width="30" height="30" rx="7" fill="#1a4a31"/>
+        <!-- Gitterlinien -->
+        <line x1="5" y1="22" x2="27" y2="22" stroke="#2E7D5B" stroke-width="0.5" stroke-dasharray="2,2"/>
+        <line x1="5" y1="16" x2="27" y2="16" stroke="#2E7D5B" stroke-width="0.5" stroke-dasharray="2,2"/>
+        <line x1="5" y1="10" x2="27" y2="10" stroke="#2E7D5B" stroke-width="0.5" stroke-dasharray="2,2"/>
+        <!-- Achsen -->
+        <line x1="5" y1="8" x2="5" y2="27" stroke="#4a9a71" stroke-width="0.75"/>
+        <line x1="5" y1="27" x2="27" y2="27" stroke="#4a9a71" stroke-width="0.75"/>
+        <!-- Fläche -->
+        <path d="M5,24 L9,21 L13,18 L17,14 L21,10 L24,13 L27,9 L27,27 L5,27 Z" fill="#2E7D5B" opacity="0.3"/>
+        <!-- Linie -->
+        <path d="M5,24 L9,21 L13,18 L17,14 L21,10 L24,13 L27,9" fill="none" stroke="#5ac491" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Highlights: Hochs -->
+        <circle cx="21" cy="10" r="2" fill="#E0B23E"/>
+        <circle cx="27" cy="9"  r="2" fill="#E0B23E"/>
+      </svg>
+      <div>
+        <h1>Bovi<b>Data</b>Py</h1>
+        <p class="brand-sub">Faena bovina · Paraguay · <span id="brandRange"></span> · actualización mensual</p>
+      </div>
+    </div>
+    <p class="hero-src">Fuente: SENACSA / MGAP<br>cabezas faenadas por mes y categoría</p>
+  </div>
+
+  <div class="hero-kpis" id="heroKpis"></div>
+
+  <div class="ribbon-head">
+    <span>Pulso histórico — cada barra es un mes</span>
+    <span id="ribbonHint"></span>
+  </div>
+  <div class="pulse" id="pulse"></div>
+  <div class="pulse-axis" id="pulseAxis"></div>
+</header>
+<div class="pulse-tip" id="pulseTip" hidden></div>
+
+<!-- ===================== TABS ===================== -->
+<nav class="tabs" role="tablist">
+  <button class="tab active" data-tab="resumen" role="tab">Resumen</button>
+  <button class="tab" data-tab="categorias" role="tab">Categorías</button>
+  <button class="tab" data-tab="sexo" role="tab">Machos vs Hembras</button>
+  <button class="tab" data-tab="estacion" role="tab">Estacionalidad</button>
+  <button class="tab" data-tab="stats" role="tab">Estadísticas</button>
+  <button class="tab" data-tab="comparar" role="tab">Comparar</button>
+  <button class="tab" data-tab="datos" role="tab">Datos</button>
+</nav>
+
+<main>
+
+<!-- ===== RESUMEN ===== -->
+<section class="panel active" id="panel-resumen">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><h2>Faena anual</h2>
+        <p class="card-note" id="annualNote"></p></div>
+      <div class="chart-wrap tall"><canvas id="chAnnual"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Crecimiento interanual</h2>
+        <p class="card-note">Variación porcentual del total faenado respecto al año anterior (años completos).</p></div>
+      <div class="chart-wrap tall"><canvas id="chGrowth"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Faena mensual</h2>
+      <div class="seg" id="segMonthly">
+        <button data-m="24" class="on">24 m</button>
+        <button data-m="60">5 años</button>
+        <button data-m="120">10 años</button>
+        <button data-m="0">Todo</button>
+      </div></div>
+    <div class="chart-wrap tall"><canvas id="chMonthly"></canvas></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><h2>Tendencia — suma móvil 12 meses</h2>
+        <p class="card-note">Total acumulado de los últimos 12 meses en cada punto. Elimina la estacionalidad y muestra la tendencia de fondo.</p></div>
+      <div class="chart-wrap tall"><canvas id="chRolling"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Acumulado por año</h2>
+        <p class="card-note">Suma corrida enero→diciembre, para comparar el año en curso contra años previos al mismo punto del calendario.</p></div>
+      <div class="chart-wrap tall"><canvas id="chCumulative"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Récords de la serie</h2></div>
+    <div class="table-scroll"><table class="data-table" id="tblRecords"></table></div>
+  </div>
+</section>
+
+<!-- ===== CATEGORÍAS ===== -->
+<section class="panel" id="panel-categorias">
+  <div class="notice"><strong>Quiebre metodológico — enero 2019.</strong> Hasta diciembre 2018 SENACSA reportaba vacas y vaquillas como una sola categoría («Vacas»). Desde enero 2019 se publican por separado, por lo que las series por categoría son plenamente comparables recién desde 2019.</div>
+
+  <div class="card">
+    <div class="card-head"><h2>Composición de la faena</h2>
+      <div class="seg" id="segCatRange">
+        <button data-from="2019-01" class="on">Desde 2019</button>
+        <button data-from="all">Serie completa</button>
+      </div></div>
+    <div class="chart-wrap tall"><canvas id="chCatStack"></canvas></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><h2>Participación por categoría (%)</h2>
+        <p class="card-note">Peso anual de cada categoría sobre el total faenado.</p></div>
+      <div class="chart-wrap tall"><canvas id="chCatShare"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Índice de evolución (base 2019 = 100)</h2>
+        <p class="card-note">Crecimiento relativo de cada categoría desde 2019. Muestra qué categoría empuja la faena.</p></div>
+      <div class="chart-wrap tall"><canvas id="chCatIndex"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Categorías por año</h2>
+      <p class="card-note">Totales anuales en cabezas. El año en curso (*) se muestra como acumulado parcial.</p></div>
+    <div class="table-scroll"><table class="data-table" id="tblCatAnnual"></table></div>
+  </div>
+</section>
+
+<!-- ===== MACHOS VS HEMBRAS ===== -->
+<section class="panel" id="panel-sexo">
+  <p class="intro">Machos = novillos + toros. Hembras = vacas + vaquillas. Como antes de 2019 las vaquillas ya estaban dentro de «Vacas», esta serie es <strong>consistente en todo el período 2006–2026</strong>. La participación de hembras es el indicador clásico del ciclo ganadero: cuando sube hay liquidación de rodeo, cuando baja hay retención de vientres.</p>
+
+  <div class="kpi-grid" id="kpiSexo"></div>
+
+  <div class="card">
+    <div class="card-head"><h2>Participación de hembras en la faena</h2>
+      <p class="card-note">Media móvil de 12 meses. La línea punteada marca el 45 %, umbral usual de liquidación de rodeo.</p></div>
+    <div class="chart-wrap tall"><canvas id="chHembrasPct"></canvas></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><h2>Machos y hembras por año</h2></div>
+      <div class="chart-wrap tall"><canvas id="chSexoAnnual"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Vaquillas dentro de las hembras</h2>
+        <p class="card-note">Disponible desde 2019. El peso creciente de vaquillas indica mayor faena de hembras jóvenes.</p></div>
+      <div class="chart-wrap tall"><canvas id="chVaqShare"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== ESTACIONALIDAD ===== -->
+<section class="panel" id="panel-estacion">
+  <div class="card">
+    <div class="card-head"><h2>Índice estacional</h2>
+      <div class="seg" id="segSeason">
+        <button data-from="2019" class="on">2019 – hoy</button>
+        <button data-from="2006">Serie completa</button>
+      </div>
+      <p class="card-note">Promedio del índice mensual (100 = promedio del año). Sobre 100 = meses de faena alta. El pico se da en mayo–julio; el valle en el primer trimestre y septiembre.</p></div>
+    <div class="chart-wrap tall"><canvas id="chSeason"></canvas></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><h2>Dispersión mensual</h2>
+        <p class="card-note">Rango (mín–máx) y promedio de cada mes calendario desde 2019. La banda muestra cuánto varía cada mes entre años.</p></div>
+      <div class="chart-wrap tall"><canvas id="chSeasonBand"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Comparación de años</h2>
+        <p class="card-note">Faena mensual de los últimos años, superpuesta por mes calendario.</p></div>
+      <div class="chart-wrap tall"><canvas id="chYoY"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><h2>Probabilidades por mes</h2>
+        <p class="card-note">Frecuencia histórica (años completos desde 2019): probabilidad de que el mes supere el promedio del año y de que suba respecto al mes anterior.</p></div>
+      <div class="chart-wrap tall"><canvas id="chProb"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Estadística por mes calendario</h2>
+        <p class="card-note">Desde 2019, años completos. CV = coeficiente de variación (desvío / promedio): qué tan predecible es cada mes.</p></div>
+      <div class="table-scroll"><table class="data-table" id="tblMonthStats"></table></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Mapa de calor mensual</h2>
+      <p class="card-note">Cabezas faenadas por mes y año. El color escala del mínimo al máximo de toda la serie.</p></div>
+    <div class="table-scroll"><table class="heatmap" id="tblHeat"></table></div>
+  </div>
+</section>
+
+<!-- ===== ESTADÍSTICAS ===== -->
+<section class="panel" id="panel-stats">
+  <div class="kpi-grid" id="kpiStats"></div>
+
+  <div class="card">
+    <div class="card-head"><h2>Lecturas automáticas</h2>
+      <p class="card-note">Insights calculados directamente de la serie. Se actualizan solos con cada nuevo mes de datos.</p></div>
+    <ul class="insights" id="insightsList"></ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Proyección <span id="projYearLbl"></span></h2>
+      <p class="card-note" id="projNote"></p></div>
+    <div class="chart-wrap tall"><canvas id="chProjection"></canvas></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="card-head"><h2>Crecimiento por período (CAGR)</h2>
+        <p class="card-note">Tasa de crecimiento anual compuesta del total faenado, por ventana de tiempo.</p></div>
+      <div class="chart-wrap tall"><canvas id="chCagr"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Distribución de la variación interanual</h2>
+        <p class="card-note">Histograma de las variaciones % mensuales contra el mismo mes del año anterior (toda la serie).</p></div>
+      <div class="chart-wrap tall"><canvas id="chYoYDist"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Meses atípicos</h2>
+      <p class="card-note">Detección automática: meses cuyo desvío contra la tendencia desestacionalizada supera 2 desvíos estándar (|z| ≥ 2). Sirve para identificar shocks — sanitarios, climáticos o de mercado.</p></div>
+    <div class="table-scroll"><table class="data-table" id="tblAnomalies"></table></div>
+  </div>
+</section>
+
+<!-- ===== COMPARAR ===== -->
+<section class="panel" id="panel-comparar">
+  <p class="intro">Elegí dos años para compararlos mes a mes y por categoría. Útil para medir el desempeño del año en curso o ver el efecto de un año atípico.</p>
+  <div class="card">
+    <div class="controls">
+      <div class="vs">
+        <select id="cmpA"></select>
+        <button class="swap" id="cmpSwap" title="Intercambiar">⇄</button>
+        <select id="cmpB"></select>
+      </div>
+      <span class="card-note" id="cmpMode"></span>
+    </div>
+    <div class="kpi-grid" id="cmpKpis"></div>
+    <div class="chart-wrap tall"><canvas id="chCompare"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Detalle por categoría</h2>
+      <p class="card-note" id="cmpTblNote"></p></div>
+    <div class="table-scroll"><table class="data-table" id="tblCompare"></table></div>
+  </div>
+</section>
+
+<!-- ===== DATOS ===== -->
+<section class="panel" id="panel-datos">
+  <div class="card">
+    <div class="card-head"><h2>Serie completa</h2>
+      <div class="controls">
+        <label for="selYear">Año</label>
+        <select id="selYear"></select>
+        <button class="btn" id="btnCSV">Descargar CSV</button>
+      </div>
+      <p class="card-note">«—» en vaquillas antes de 2019 = estaban incluidas en vacas. Para actualizar la base: agregar el nuevo mes al final de <code>data.js</code> y publicar (ver README).</p></div>
+    <div class="table-scroll"><table class="data-table" id="tblData"></table></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>BoviDataPy · base de datos histórica de faena bovina del Paraguay · elaboración propia sobre datos de SENACSA / MGAP · actualización mensual.</p>
+</footer>
+
+<script src="chartjs.umd.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
